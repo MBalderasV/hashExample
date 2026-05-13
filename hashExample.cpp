@@ -1,49 +1,88 @@
 #include <iostream>
 #include <string>
-#include <Windows.h>
-//#include <locale>
+#include <vector>
+#include <list>
+#include <windows.h>
 
 using namespace std;
 
-// Esta es nuestra función de transformación (Función Hash)
+// Función Hash
 int transformarClave(string clave, int totalCajones) {
     int suma = 0;
-
-    // 1. Recorremos cada letra de la palabra (clave)
     for (char letra : clave) {
-        // Al sumar un 'char' a un 'int', C++ usa automáticamente 
-        // el valor numérico (ASCII) de la letra.
-        suma = suma + letra;
+        suma += letra;
     }
-
-    // 2. Usamos la operación módulo (%) que nos da el residuo de una división.
-    // Esto garantiza que el resultado SIEMPRE sea un número entre 0 y (totalCajones - 1).
-    int posicionFinal = suma % totalCajones;
-
-    return posicionFinal;
+    return suma % totalCajones;
 }
 
+// Estructura de Diccionario (Tabla Hash)
+class Diccionario {
+private:
+    int totalCajones;
+    // Vector que actúa como el arreglo principal.
+    // Cada posición contiene una lista de pares <Clave, Valor> para manejar colisiones.
+    vector<list<pair<string, string>>> archivero;
+
+public:
+    Diccionario(int tamano) {
+        totalCajones = tamano;
+        archivero.resize(tamano);
+    }
+
+    // Guardar en el diccionario
+    void insertar(string clave, string valor) {
+        int indice = transformarClave(clave, totalCajones);
+
+        // 1. Revisar si la clave ya existe en la lista de ese índice para actualizarla
+        for (auto& elemento : archivero[indice]) {
+            if (elemento.first == clave) {
+                elemento.second = valor;
+                return;
+            }
+        }
+
+        // 2. Si no existe (o si hay colisión con otras claves), se agrega al final de la lista
+        archivero[indice].push_back({ clave, valor });
+    }
+
+    // Recuperar del diccionario
+    string buscar(string clave) {
+        int indice = transformarClave(clave, totalCajones);
+
+        // Buscar linealmente dentro de la lista correspondiente a ese índice
+        for (auto& elemento : archivero[indice]) {
+            if (elemento.first == clave) {
+                return elemento.second;
+            }
+        }
+        return "No encontrado";
+    }
+};
+
 int main() {
-	//setlocale(LC_ALL, "spanish"); // Configura la localización para soportar caracteres especiales
-    SetConsoleOutputCP(CP_UTF8); // Configura la consola para mostrar caracteres UTF-8
-    // Imaginemos que tenemos un arreglo o archivero de 10 posiciones (0 al 9)
-    int cajones = 10;
+    SetConsoleOutputCP(CP_UTF8);
 
-    // Nuestras claves a transformar
-    string clave1 = "ANA";
-    string clave2 = "PEPE";
-    string clave3 = "ROBERTO";
+    Diccionario miDiccionario(10);
 
-    cout << "--- Resultados de la Transformación ---" << endl;
+    // Inserción normal
+    miDiccionario.insertar("ANA", "Datos de Ana");
+    miDiccionario.insertar("PEPE", "Datos de Pepe");
 
-    cout << "La clave '" << clave1 << "' va al cajón: "
-        << transformarClave(clave1, cajones) << endl;
+    // Forzando una colisión: "ROMA" y "AMOR" tienen las mismas letras.
+    // La suma ASCII será idéntica, resultando en el mismo índice (colisión).
+    miDiccionario.insertar("ROMA", "Datos de Roma (Legal)");
+    miDiccionario.insertar("AMOR", "Datos de Amor (RH)");
 
-    cout << "La clave '" << clave2 << "' va al cajón: "
-        << transformarClave(clave2, cajones) << endl;
+    cout << "--- Búsqueda en el Diccionario ---" << endl;
+    cout << "Buscando ANA: " << miDiccionario.buscar("ANA") << endl;
+    cout << "Buscando ROMA: " << miDiccionario.buscar("ROMA") << endl;
 
-    cout << "La clave '" << clave3 << "' va al cajón: "
-        << transformarClave(clave3, cajones) << endl;
+    // Al buscar "AMOR", el algoritmo va al mismo índice que "ROMA" 
+    // y recorre la lista ligada hasta encontrar la clave exacta.
+    cout << "Buscando AMOR: " << miDiccionario.buscar("AMOR") << endl;
+
+    // Búsqueda de un elemento inexistente
+    cout << "Buscando LUIS: " << miDiccionario.buscar("LUIS") << endl;
 
     return 0;
 }
